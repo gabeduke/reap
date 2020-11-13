@@ -1,0 +1,14 @@
+apiVersion: skaffold/v2beta9
+kind: Config
+metadata:
+  name: reap
+build:
+  artifacts:
+  - image: dukeman/reap
+    context: .
+    custom:
+      buildCommand: ./hack/custom-build.sh
+deploy:
+  kubectl:
+    manifests:
+    - deploy/reap.yaml

@@ -7,5 +7,5 @@ DOCKER_CONTEXT = .
 
 build:
 	docker buildx build \
-	-platform linux/arm64,linux/amd64 \
+	--platform linux/arm64,linux/amd64 \
 	--push -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_CONTEXT)

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 	"os"
 	"os/signal"
 	"strconv"
@@ -108,7 +109,7 @@ func receiveMQTTMessage(ctx context.Context, receiveChannel <-chan MQTT.Message)
 func createMQTTClient(brokerURL string, channel chan<- MQTT.Message) {
 	opts := MQTT.NewClientOptions()
 	opts.AddBroker(brokerURL)
-	opts.SetClientID("reap")
+	opts.SetClientID("reap"+uuid.NewString())
 
 	opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
 		channel <- msg

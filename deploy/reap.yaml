@@ -20,6 +20,11 @@ spec:
         resources: {}
         env:
         - name: DB
-          value: "http://influxdb-influxdb2.influxdb.svc:8086"
+          value: "https://influxdb.leetserve.com"
         - name: BROKER
           value: "tcp://mqtt.leetserve.com:1883"
+        - valueFrom:
+            secretKeyRef:
+              name: reap-creds
+              key: INFLUXDB_TOKEN
+          name: INFLUXDB_TOKEN

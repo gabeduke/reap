@@ -87,6 +87,7 @@ func NewMqttc(config Config, logger watermill.LoggerAdapter) (*Mqttc, error) {
 	}
 
 	c := mqtt.NewClient(opts)
+	optsr := c.OptionsReader()
 
 	if token := c.Connect(); token.Wait() && token.Error() != nil {
 		return nil, token.Error()
@@ -96,7 +97,7 @@ func NewMqttc(config Config, logger watermill.LoggerAdapter) (*Mqttc, error) {
 		config: config,
 
 		logger: logger.With(watermill.LogFields{
-			"pubsub_uuid": opts.ClientID,
+			"pubsub_uuid": optsr.ClientID(),
 		}),
 
 		closing: make(chan struct{}),

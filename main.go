@@ -18,7 +18,7 @@ var dbURL string
 func main() {
 	readConfiguration()
 
-	clientId := fmt.Sprintf("reap-%d", shortuuid.New())
+	clientId := fmt.Sprintf("reap-%s", shortuuid.New())
 
 	// build watermill client
 	reaper, err := reap.NewReaper(brokerURL, dbURL, clientId)

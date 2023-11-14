@@ -20,7 +20,7 @@ spec:
         resources: {}
         env:
         - name: DB
-          value: "https://influxdb.leetserve.com"
+          value: "http://influxdb-influxdb2.influxdb"
         - name: BROKER
           value: "tcp://mqtt.leetserve.com:1883"
         - name: BUCKET

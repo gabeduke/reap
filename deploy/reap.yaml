@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: reap
-        image: dukeman/reap:v1.2.3
+        image: dukeman/reap:v1.2.4
         resources: {}
         env:
         - name: DB

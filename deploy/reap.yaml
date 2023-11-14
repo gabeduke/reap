@@ -23,6 +23,8 @@ spec:
           value: "https://influxdb.leetserve.com"
         - name: BROKER
           value: "tcp://mqtt.leetserve.com:1883"
+        - name: BUCKET
+          value: "home"
         - valueFrom:
             secretKeyRef:
               name: reap-creds

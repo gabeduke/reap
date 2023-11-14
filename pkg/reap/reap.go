@@ -6,6 +6,7 @@ import (
 	"github.com/gabeduke/reap/pkg/influx"
 	"github.com/gabeduke/reap/pkg/mqttc"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"strconv"
 	"strings"
 )
@@ -46,8 +47,7 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 		topicParts := strings.Split(topic, "/")
 
 		if !strings.Contains(topic, "state") && len(topicParts) >= 3 {
-			source := topicParts[1]
-			sensor := strings.Join(topicParts[2:len(topicParts)], "-")
+			sensor := strings.Join(topicParts[1:len(topicParts)], "-")
 
 			convertedPayload, err := strconv.ParseFloat(payload, 32)
 
@@ -58,10 +58,12 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 				continue
 			}
 
-			err = r.WritePoint(sensor, source, convertedPayload)
+			bucket := viper.GetString("bucket")
+			err = r.WritePoint(sensor, bucket, convertedPayload)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"error": err,
+					"error":  err,
+					"bucket": bucket,
 				}).Info("Failed to write point to influx")
 				continue
 			}

@@ -3,7 +3,6 @@ package mqttc
 import (
 	"context"
 	"fmt"
-	"github.com/lithammer/shortuuid/v3"
 	"net/url"
 	"strconv"
 	"sync"
@@ -97,7 +96,7 @@ func NewMqttc(config Config, logger watermill.LoggerAdapter) (*Mqttc, error) {
 		config: config,
 
 		logger: logger.With(watermill.LogFields{
-			"pubsub_uuid": shortuuid.New(),
+			"pubsub_uuid": opts.ClientID,
 		}),
 
 		closing: make(chan struct{}),

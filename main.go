@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/adampresley/sigint"
 	"github.com/gabeduke/reap/pkg/reap"
+	"github.com/lithammer/shortuuid/v3"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -16,8 +18,10 @@ var dbURL string
 func main() {
 	readConfiguration()
 
+	clientId := fmt.Sprintf("reap-%d", shortuuid.New())
+
 	// build watermill client
-	reaper, err := reap.NewReaper(brokerURL, dbURL, "watermill-mqtt")
+	reaper, err := reap.NewReaper(brokerURL, dbURL, clientId)
 	if err != nil {
 		log.Fatal(err)
 	}

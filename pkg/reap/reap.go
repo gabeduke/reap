@@ -47,7 +47,9 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 		topicParts := strings.Split(topic, "/")
 
 		if !strings.Contains(topic, "state") && len(topicParts) >= 3 {
-			sensor := strings.Join(topicParts[1:len(topicParts)], "-")
+			group := topicParts[0]
+			device := topicParts[1]
+			measurement := strings.Join(topicParts[2:len(topicParts)], "-")
 
 			convertedPayload, err := strconv.ParseFloat(payload, 32)
 
@@ -58,8 +60,13 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 				continue
 			}
 
+			tags := map[string]string{
+				"group":  group,
+				"device": device,
+				"sensor": measurement,
+			}
 			bucket := viper.GetString("bucket")
-			err = r.WritePoint(sensor, bucket, convertedPayload)
+			err = r.WritePoint(measurement, bucket, convertedPayload, tags)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error":  err,

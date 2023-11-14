@@ -28,13 +28,10 @@ func NewClient(url string) (*Influx, error) {
 }
 
 // WritePoint writes a point to the database
-func (i *Influx) WritePoint(sensor, source string, value float64) error {
+func (i *Influx) WritePoint(sensor, source string, value float64, tags map[string]string) error {
 	org := "leetserve"
 	bucket := source
 	writeAPI := i.influxClient.WriteAPIBlocking(org, bucket)
-
-	// Create a point and add to batch
-	tags := map[string]string{"source": source}
 
 	fields := map[string]interface{}{
 		"value": value,

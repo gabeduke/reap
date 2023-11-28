@@ -44,19 +44,26 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 			"payload": payload,
 		}).Info("received message")
 
+		// Check if topic should be ignored
+		if shouldIgnoreTopic(topic) {
+			log.Info("Ignoring topic based on filter criteria")
+			msg.Ack()
+			continue
+		}
+
 		topicParts := strings.Split(topic, "/")
 
-		if !strings.Contains(topic, "state") && len(topicParts) >= 3 {
+		if len(topicParts) >= 3 {
 			group := topicParts[0]
 			device := topicParts[1]
-			measurement := strings.Join(topicParts[2:len(topicParts)], "-")
+			measurement := strings.Join(topicParts[2:], "-")
 
 			convertedPayload, err := strconv.ParseFloat(payload, 32)
-
 			if err != nil {
 				log.WithFields(log.Fields{
 					"error": err,
 				}).Info("Failed to parse number for payload")
+				msg.Ack()
 				continue
 			}
 
@@ -72,14 +79,25 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 					"error":  err,
 					"bucket": bucket,
 				}).Info("Failed to write point to influx")
+				msg.Ack()
 				continue
 			}
 		} else {
 			log.Info("Message did not contain expected topic parts, skipping it")
 		}
 
-		// we need to Acknowledge that we received and processed the message,
-		// otherwise, it will be resent over and over again.
 		msg.Ack()
 	}
+}
+
+func shouldIgnoreTopic(topic string) bool {
+	// Define topics to ignore
+	ignoredTopics := []string{"log", "metadata", "state"}
+
+	for _, ignored := range ignoredTopics {
+		if strings.Contains(topic, ignored) {
+			return true
+		}
+	}
+	return false
 }

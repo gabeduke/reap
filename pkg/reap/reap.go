@@ -52,6 +52,7 @@ func (r *Reap) InfluxHandler(messages <-chan *message.Message) {
 			// Check if the message conforms to the Homie convention
 		} else if strings.HasPrefix(topic, "homie/") {
 			r.handleHomieMessage(topic, payload)
+			continue
 		} else {
 			// Handle non-Homie messages (simple floats)
 

@@ -1,66 +1,70 @@
 package main
 
 import (
-	"context"
+	"flag"
 	"fmt"
-	"github.com/adampresley/sigint"
-	"github.com/gabeduke/reap/pkg/reap"
-	"github.com/lithammer/shortuuid/v3"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
+	"log/slog"
 	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+
+	"github.com/gabeduke/reap/internal/reap"
 )
 
-var brokerURL string
-var dbURL string
-
-func main() {
-	readConfiguration()
-
-	clientId := fmt.Sprintf("reap-%s", shortuuid.New())
-
-	// build watermill client
-	reaper, err := reap.NewReaper(brokerURL, dbURL, clientId)
-	if err != nil {
-		log.Fatal(err)
+// env returns $key, or def when unset. Flags default to the environment so the
+// same names (BROKER, DB, BUCKET, ...) work either way.
+func env(key, def string) string {
+	if v, ok := os.LookupEnv(key); ok && v != "" {
+		return v
 	}
-
-	// start signal handler
-	sigint.Listen(func() {
-		err := reaper.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	})
-
-	// start message processing
-	msgStream, err := reaper.Subscribe(context.Background(), "#")
-
-	reaper.InfluxHandler(msgStream)
+	return def
 }
 
-func readConfiguration() {
-	// allow setting values also with commandline flags
-	pflag.String("broker", "tcp://mqtt.leetserve.com:1883", "MQTT-broker url")
-	viper.BindPFlag("broker", pflag.Lookup("broker"))
+func main() {
+	broker := flag.String("broker", env("BROKER", "tcp://mqtt.leetserve.com:1883"), "MQTT broker URL [BROKER]")
+	topic := flag.String("topic", env("TOPIC", "#"), "MQTT topic filter [TOPIC]")
+	db := flag.String("db", env("DB", "http://localhost:8086"), "InfluxDB URL [DB]")
+	org := flag.String("org", env("ORG", "leetserve"), "InfluxDB org [ORG]")
+	bucket := flag.String("bucket", env("BUCKET", "home"), "InfluxDB bucket [BUCKET]")
+	ignore := flag.String("ignore", env("IGNORE", "log,metadata,state"), "comma-separated topic segments to skip [IGNORE]")
+	debug := flag.Bool("debug", env("DEBUG", "") != "", "log every skipped message [DEBUG]")
+	flag.Parse()
 
-	pflag.String("bucket", "home", "InfluxDB bucket")
-	viper.BindPFlag("bucket", pflag.Lookup("bucket"))
+	lvl := slog.LevelInfo
+	if *debug {
+		lvl = slog.LevelDebug
+	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: lvl}))
 
-	pflag.String("db", "http://localhost:8086", "Influx database connection url")
-	viper.BindPFlag("db", pflag.Lookup("db"))
+	token := os.Getenv("INFLUXDB_TOKEN")
+	if token == "" {
+		log.Error("INFLUXDB_TOKEN is not set")
+		os.Exit(1)
+	}
 
-	// parse values from environment variables
-	viper.AutomaticEnv()
-	pflag.Parse()
+	skip := map[string]struct{}{}
+	for _, s := range strings.Split(*ignore, ",") {
+		if s = strings.TrimSpace(s); s != "" {
+			skip[s] = struct{}{}
+		}
+	}
 
-	brokerURL = viper.GetString("broker")
-	dbBucket := viper.GetString("bucket")
-	dbURL = viper.GetString("db")
+	log.Info("starting", "broker", *broker, "topic", *topic, "db", *db, "org", *org, "bucket", *bucket)
+	out := reap.NewInflux(*db, token, *org, *bucket, log)
+	h := &reap.Handler{Writer: out, Ignore: skip, Log: log}
 
-	log.Infof("Using broker %s", brokerURL)
-	log.Infof("Using bucket %s", dbBucket)
-	log.Infof("Using database %s", dbURL)
+	host, _ := os.Hostname()
+	client, err := reap.Subscribe(*broker, fmt.Sprintf("reap-%s", host), *topic, h, log)
+	if err != nil {
+		log.Error("cannot start", "err", err)
+		os.Exit(1)
+	}
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	<-sig
+	log.Info("shutting down")
+	client.Disconnect(250)
+	out.Close()
 }

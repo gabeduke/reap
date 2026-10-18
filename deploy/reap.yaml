@@ -16,8 +16,15 @@ spec:
     spec:
       containers:
       - name: reap
-        image: dukeman/reap:v1.2.8-4-g10c4b77
-        resources: {}
+        image: ghcr.io/gabeduke/reap:latest  # CI also tags sha-<short>; pin to that when rolling out
+        resources:
+          requests: {cpu: 10m, memory: 16Mi}
+          limits: {memory: 64Mi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
         env:
         - name: DB
           value: "http://influxdb-influxdb2.influxdb"
@@ -25,6 +32,8 @@ spec:
           value: "tcp://mqtt.leetserve.com:1883"
         - name: BUCKET
           value: "home"
+        - name: ORG
+          value: "leetserve"
         - valueFrom:
             secretKeyRef:
               name: reap-creds

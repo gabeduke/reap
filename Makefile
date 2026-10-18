@@ -1,16 +1,16 @@
-VERSION = $(shell git describe --tags --always --dirty)
+.PHONY: test build run dev
 
-DOCKER_REGISTRY = dukeman
-DOCKER_IMAGE = reap
-DOCKER_TAG = $(VERSION)
-DOCKER_CONTEXT = .
+test:
+	go vet ./...
+	go test -race ./...
 
 build:
-	docker buildx build \
-	--platform linux/arm64,linux/amd64 \
-	--push -t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE):$(DOCKER_TAG) $(DOCKER_CONTEXT)
+	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/reap .
+
+# Images are built and pushed to ghcr.io/gabeduke/reap by CI (.github/workflows/ci.yaml).
+# Needs INFLUXDB_TOKEN; BROKER, DB, BUCKET, ORG, TOPIC, IGNORE are optional.
+run:
+	go run . --debug
 
 dev:
-	docker run -d \
-      -p 8086:8086 \
-      influxdb:latest
+	docker run -d -p 8086:8086 influxdb:2
